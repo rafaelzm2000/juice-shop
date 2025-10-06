@@ -1,0 +1,113 @@
+/*
+ * Copyright (c) 2014-2021 Bjoern Kimminich.
+ * SPDX-License-Identifier: MIT
+ */
+
+const fs = require('fs')
+const path = require('path')
+const models = require('../models/index')
+const insecurity = require('../lib/insecurity')
+const request = require('request')
+const logger = require('../lib/logger')
+const sanitize = require('sanitize-filename')
+const validUrl = require('valid-url')
+
+function isValidImageExt(ext) {
+    const validExtensions = ['jpg', 'jpeg', 'png', 'svg', 'gif']
+    return validExtensions.includes(ext.toLowerCase())
+}
+
+function isValidImageUrl(url) {
+    if (!validUrl.isWebUri(url)) {
+        return false
+    }
+    const parsedUrl = new URL(url)
+    // Whitelist allowed domains or block internal IPs
+    const blockedHosts = ['localhost', '127.0.0.1', '0.0.0.0', '::1']
+    if (blockedHosts.includes(parsedUrl.hostname)) {
+        return false
+    }
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return false
+    }
+    return true
+}
+
+module.exports = function profileImageUrlUpload () {
+    return async (req, res, next) => {
+        try {
+            if (req.body.imageUrl === undefined) {
+                res.location(process.env.BASE_PATH + '/profile')
+                return res.redirect(process.env.BASE_PATH + '/profile')
+            }
+
+            const url = req.body.imageUrl
+            
+            // Input validation
+            if (typeof url !== 'string' || url.length > 2048) {
+                return next(new Error('Invalid URL format'))
+            }
+
+            if (!isValidImageUrl(url)) {
+                return next(new Error('Invalid image URL'))
+            }
+
+            // SSRF detection (kept for backwards compatibility with the challenge)
+            if (url.match(/(.)*solve\/challenges\/server-side(.)*/) !== null) {
+                req.app.locals.abused_ssrf_bug = true
+            }
+
+            const loggedInUser = insecurity.authenticatedUsers.get(req.cookies.token)
+            if (!loggedInUser) {
+                return next(new Error('Blocked illegal activity by ' + req.connection.remoteAddress))
+            }
+
+            const imageRequest = request
+                .get(url)
+                .on('error', async function (err) {
+                    try {
+                        const user = await models.User.findByPk(loggedInUser.data.id)
+                        await user.update({ profileImage: url })
+                        logger.warn('Error retrieving user profile image: ' + err.message + '; using image link directly')
+                    } catch (error) {
+                        next(error)
+                    }
+                })
+                .on('response', async function (res) {
+                    try {
+                        if (res.statusCode === 200) {
+                            const ext = url.split('.').slice(-1)[0].toLowerCase()
+                            if (!isValidImageExt(ext)) {
+                                return next(new Error('Invalid file extension'))
+                            }
+
+                            const uploadDir = path.resolve('frontend/dist/frontend/assets/public/images/uploads')
+                            const safeId = sanitize(loggedInUser.data.id.toString())
+                            const filePath = path.join(uploadDir, `${safeId}.${ext}`)
+
+                            // Verify the resolved path is within the uploads directory
+                            if (!filePath.startsWith(uploadDir)) {
+                                return next(new Error('Invalid file path'))
+                            }
+
+                            imageRequest.pipe(fs.createWriteStream(filePath))
+                            
+                            const user = await models.User.findByPk(loggedInUser.data.id)
+                            await user.update({ profileImage: `/assets/public/images/uploads/${safeId}.${ext}` })
+                        } else {
+                            const user = await models.User.findByPk(loggedInUser.data.id)
+                            await user.update({ profileImage: url })
+                        }
+                    } catch (error) {
+                        next(error)
+                    }
+                })
+
+            res.location(process.env.BASE_PATH + '/profile')
+            res.redirect(process.env.BASE_PATH + '/profile')
+        } catch (error) {
+            next(error)
+        }
+    }
+}

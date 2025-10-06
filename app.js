@@ -4,7 +4,7 @@
  */
 
 <<<<<<< HEAD
-// Test commit: verifying Git flow
+// Test commit: verifying Git flow ccc
 
 =======
 >>>>>>> origin/master

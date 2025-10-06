@@ -6,7 +6,11 @@
 const fs = require('fs')
 const models = require('../models/index')
 const insecurity = require('../lib/insecurity')
+<<<<<<< HEAD
 const path = require('node:path')
+=======
+const request = require('request')
+>>>>>>> origin/master
 const logger = require('../lib/logger')
 
 module.exports = function profileImageUrlUpload () {
@@ -25,7 +29,11 @@ module.exports = function profileImageUrlUpload () {
           .on('response', function (res) {
             if (res.statusCode === 200) {
               const ext = ['jpg', 'jpeg', 'png', 'svg', 'gif'].includes(url.split('.').slice(-1)[0].toLowerCase()) ? url.split('.').slice(-1)[0].toLowerCase() : 'jpg'
+<<<<<<< HEAD
               imageRequest.pipe(fs.createWriteStream(path.basename(`frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`)))
+=======
+              imageRequest.pipe(fs.createWriteStream(`frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`))
+>>>>>>> origin/master
               models.User.findByPk(loggedInUser.data.id).then(user => { return user.update({ profileImage: `/assets/public/images/uploads/${loggedInUser.data.id}.${ext}` }) }).catch(error => { next(error) })
             } else models.User.findByPk(loggedInUser.data.id).then(user => { return user.update({ profileImage: url }) }).catch(error => { next(error) })
           })

@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+<<<<<<< HEAD
 // Test commit: verifying Git flow
 
+=======
+>>>>>>> origin/master
 require('./lib/startup/validateDependencies')().then(() => {
   const server = require('./server')
   server.start()

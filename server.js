@@ -10,7 +10,14 @@ const colors = require('colors/safe')
 const finale = require('finale-rest')
 const express = require('express')
 const compression = require('compression')
+<<<<<<< HEAD
 const errorhandler = require('errorhandler')
+=======
+const helmet = require('helmet')
+const featurePolicy = require('feature-policy')
+const errorhandler = require('errorhandler')
+const cookieParser = require('cookie-parser')
+>>>>>>> origin/master
 const serveIndex = require('serve-index')
 const bodyParser = require('body-parser')
 const cors = require('cors')
@@ -18,8 +25,13 @@ const securityTxt = require('express-security.txt')
 const robots = require('express-robots-txt')
 const yaml = require('js-yaml')
 const swaggerUi = require('swagger-ui-express')
+<<<<<<< HEAD
 const client = require('prom-client')
 const { config: securityConfig, applySecurityMiddleware } = require('./lib/securityConfig')
+=======
+const RateLimit = require('express-rate-limit')
+const client = require('prom-client')
+>>>>>>> origin/master
 const swaggerDocument = yaml.load(fs.readFileSync('./swagger.yml', 'utf8'))
 const {
   ensureFileIsPassed,
@@ -159,9 +171,22 @@ app.use(compression())
 app.options('*', cors())
 app.use(cors())
 
+<<<<<<< HEAD
 /* Enhanced Security middleware */
 app.disable('x-powered-by')
 applySecurityMiddleware(app)
+=======
+/* Security middleware */
+app.use(helmet.noSniff())
+app.use(helmet.frameguard())
+// app.use(helmet.xssFilter()); // = no protection from persisted XSS via RESTful API
+app.disable('x-powered-by')
+app.use(featurePolicy({
+  features: {
+    payment: ["'self'"]
+  }
+}))
+>>>>>>> origin/master
 
 /* Remove duplicate slashes from URL which allowed bypassing subsequent filters */
 app.use((req, res, next) => {

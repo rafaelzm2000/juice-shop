@@ -7,6 +7,10 @@ const utils = require('../lib/utils')
 const challenges = require('../data/datacache').challenges
 const db = require('../data/mongodb')
 const insecurity = require('../lib/insecurity')
+<<<<<<< HEAD
+=======
+//test
+>>>>>>> origin/master
 
 module.exports = function productReviews () {
   return (req, res, next) => {
